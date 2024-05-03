@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use dirs;
 use std::fs;
+use std::io::prelude::*;
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
@@ -76,9 +77,63 @@ fn main() {
                 println!("Could not create a file, pleas check folder permissions");
             }
         }
-        Commands::Modify { website } => todo!(),
-        Commands::Delete { website } => todo!(),
-        Commands::Get { website } => todo!(),
+        Commands::Modify { mut website } => {
+            // TODO: Refactor this to a fn
+
+            website.push_str(".txt");
+            let mut path = PathBuf::new();
+            path.push(home_folder);
+            path.push(Into::<std::path::PathBuf>::into(&website));
+
+            if fs::File::open(&path).is_ok() {
+                let stdin = std::io::stdin();
+                let mut new_password = String::new();
+                println!("Please enter your new password");
+                stdin
+                    .read_line(&mut new_password)
+                    .expect("No input was provided");
+
+                if fs::write(path, new_password).is_ok() {
+                    println!("Password sucessfully changed");
+                } else {
+                    eprintln!("There was an error while writing to file");
+                }
+            } else {
+                println!("{:?}", website);
+                eprintln!("Could not find the website");
+            }
+        }
+        Commands::Delete { mut website } => {
+            website.push_str(".txt");
+            let mut path = PathBuf::new();
+            path.push(home_folder);
+            path.push(Into::<std::path::PathBuf>::into(&website));
+
+            if fs::File::open(&path).is_ok() {
+                if fs::remove_file(path).is_ok() {
+                    println!("Password Deleted!");
+                } else {
+                    eprintln!("Could not delete file");
+                }
+            } else {
+                eprintln!("Could not find the website");
+            }
+        }
+        Commands::Get { mut website } => {
+            website.push_str(".txt");
+            let mut path = PathBuf::new();
+            path.push(home_folder);
+            path.push(Into::<std::path::PathBuf>::into(&website));
+
+            if let Ok(mut f) = fs::File::open(path) {
+                let mut contents = String::new();
+                f.read_to_string(&mut contents)
+                    .expect("Could not read the file");
+                println!("{}", contents);
+            } else {
+                eprintln!("Could not find the website");
+            }
+        }
         Commands::List {} => todo!(),
     }
 }

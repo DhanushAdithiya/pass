@@ -33,6 +33,16 @@ fn create_dir(folder_path: PathBuf) {
     }
 }
 
+fn create_password_file(name: &mut String, home_folder: PathBuf) -> PathBuf {
+    name.push_str(".txt");
+
+    let mut path = PathBuf::new();
+    path.push(home_folder);
+    path.push(Into::<std::path::PathBuf>::into(&name));
+
+    return path;
+}
+
 fn display_tree(home_dir: PathBuf, indent: usize) {
     let directory = fs::read_dir(home_dir).unwrap().filter_map(|file| file.ok());
 
@@ -71,11 +81,7 @@ fn main() {
             create_dir(home_folder);
         }
         Commands::Add { mut website } => {
-            website.push_str(".txt");
-
-            let mut path = PathBuf::new();
-            path.push(home_folder);
-            path.push(Into::<std::path::PathBuf>::into(website));
+            let path = create_password_file(&mut website, home_folder);
 
             let f = fs::create_dir_all(&path.parent().unwrap());
             if f.is_ok() {
@@ -107,10 +113,7 @@ fn main() {
         Commands::Modify { mut website } => {
             // TODO: Refactor this to a fn
 
-            website.push_str(".txt");
-            let mut path = PathBuf::new();
-            path.push(home_folder);
-            path.push(Into::<std::path::PathBuf>::into(&website));
+            let path = create_password_file(&mut website, home_folder);
 
             if fs::File::open(&path).is_ok() {
                 let stdin = std::io::stdin();
@@ -131,10 +134,7 @@ fn main() {
             }
         }
         Commands::Delete { mut website } => {
-            website.push_str(".txt");
-            let mut path = PathBuf::new();
-            path.push(home_folder);
-            path.push(Into::<std::path::PathBuf>::into(&website));
+            let path = create_password_file(&mut website, home_folder);
 
             if fs::File::open(&path).is_ok() {
                 if fs::remove_file(path).is_ok() {
@@ -147,10 +147,7 @@ fn main() {
             }
         }
         Commands::Get { mut website } => {
-            website.push_str(".txt");
-            let mut path = PathBuf::new();
-            path.push(home_folder);
-            path.push(Into::<std::path::PathBuf>::into(&website));
+            let path = create_password_file(&mut website, home_folder);
 
             if let Ok(mut f) = fs::File::open(path) {
                 let mut contents = String::new();

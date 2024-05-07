@@ -33,6 +33,33 @@ fn create_dir(folder_path: PathBuf) {
     }
 }
 
+fn display_tree(home_dir: PathBuf, indent: usize) {
+    let directory = fs::read_dir(home_dir).unwrap().filter_map(|file| file.ok());
+
+    for entry in directory {
+        let file_type = entry.file_type().unwrap();
+        let mut line = String::new();
+
+        for _ in 0..indent {
+            line.push(' ');
+            line.push(' ');
+        }
+
+        line.push_str(if file_type.is_dir() {
+            "├───"
+        } else {
+            "└───"
+        });
+        line.push_str(entry.file_name().to_str().unwrap());
+
+        println!("{}", line);
+
+        if file_type.is_dir() {
+            display_tree(entry.path(), indent + 2);
+        }
+    }
+}
+
 fn main() {
     let mut home_folder = dirs::home_dir().unwrap();
     home_folder.push(".passwords");
@@ -134,6 +161,8 @@ fn main() {
                 eprintln!("Could not find the website");
             }
         }
-        Commands::List {} => todo!(),
+        Commands::List {} => {
+            display_tree(home_folder, 0);
+        }
     }
 }

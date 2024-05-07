@@ -33,6 +33,7 @@ fn create_dir(folder_path: PathBuf) {
     }
 }
 
+/// This function is used to provide a path to store the passwords as a file
 fn create_password_file(name: &mut String, home_folder: PathBuf) -> PathBuf {
     name.push_str(".txt");
 
@@ -43,6 +44,7 @@ fn create_password_file(name: &mut String, home_folder: PathBuf) -> PathBuf {
     return path;
 }
 
+/// This function displays a tree like structure for all the stored passwords
 fn display_tree(home_dir: PathBuf, indent: usize) {
     let directory = fs::read_dir(home_dir).unwrap().filter_map(|file| file.ok());
 
@@ -70,6 +72,17 @@ fn display_tree(home_dir: PathBuf, indent: usize) {
     }
 }
 
+/// This function is used to read user input form the command line
+fn read_input(message: &str) -> String {
+    let mut op = String::new();
+    println!("{message}");
+    std::io::stdin()
+        .read_line(&mut op)
+        .expect("no user input provided");
+
+    return op;
+}
+
 fn main() {
     let mut home_folder = dirs::home_dir().unwrap();
     home_folder.push(".passwords");
@@ -77,7 +90,6 @@ fn main() {
 
     match args.command {
         Commands::Init {} => {
-            // TODO: add a "." flag to initialize in the current dir
             create_dir(home_folder);
         }
         Commands::Add { mut website } => {
@@ -87,17 +99,9 @@ fn main() {
             if f.is_ok() {
                 println!("File created");
 
-                let mut password = String::new();
-                println!("Please input your password");
-                std::io::stdin()
-                    .read_line(&mut password)
-                    .expect("no user input provided");
+                let password = read_input("Please input your password");
 
-                let mut password_retype = String::new();
-                println!("Please confirm password");
-                std::io::stdin()
-                    .read_line(&mut password_retype)
-                    .expect("no user input provided");
+                let password_retype = read_input("Please confirm password");
 
                 if password == password_retype {
                     println!("{path:?}");
@@ -111,17 +115,10 @@ fn main() {
             }
         }
         Commands::Modify { mut website } => {
-            // TODO: Refactor this to a fn
-
             let path = create_password_file(&mut website, home_folder);
 
             if fs::File::open(&path).is_ok() {
-                let stdin = std::io::stdin();
-                let mut new_password = String::new();
-                println!("Please enter your new password");
-                stdin
-                    .read_line(&mut new_password)
-                    .expect("No input was provided");
+                let new_password = read_input("Please enter your new password");
 
                 if fs::write(path, new_password).is_ok() {
                     println!("Password sucessfully changed");

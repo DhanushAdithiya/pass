@@ -102,14 +102,14 @@ fn encrypt_password<'a>(key: &'a str, plaintext: &'a str) -> Vec<u8> {
 
     return ct.to_owned();
 }
-fn decrypt_password(mut buf: Vec<u8>, key: &str) -> String {
+fn decrypt_password(mut buf: Vec<u8>, key: &str) -> Result<String, block_padding::UnpadError> {
     let iv = [0u8; 16];
 
     let pt = Aes128CbcDec::new(key.as_bytes().into(), &iv.into())
-        .decrypt_padded_mut::<Pkcs7>(&mut buf)
-        .unwrap();
+        .decrypt_padded_mut::<Pkcs7>(&mut buf)?;
     let b = String::from_utf8(pt.to_vec()).unwrap();
-    return b;
+
+    return Ok(b);
 }
 
 fn main() {
@@ -122,7 +122,17 @@ fn main() {
     match args.command {
         Commands::Init {} => {
             create_dir(home_folder.clone());
-            let passphrase = read_input("Enter a passphrase key");
+            let mut passphrase;
+            loop {
+                passphrase = read_input("Enter a 16 digit passphrase key");
+
+                if passphrase.len() == 16 {
+                    break;
+                } else {
+                    eprintln!("passphrase should be 16 characters long");
+                }
+            }
+
             fs::write(passphrase_path, passphrase)
                 .expect("Could not save passphrase please check permissions");
             println!("Passphrase saved successfully");
@@ -193,25 +203,32 @@ fn main() {
         Commands::Get { mut website } => {
             let path = create_password_file(&mut website, home_folder);
 
-            if let Ok(mut p) = fs::File::open(passphrase_path) {
-                let mut passphrase = String::new();
-                p.read_to_string(&mut passphrase)
-                    .expect("Could not read passphrase");
-                if let Ok(mut f) = fs::File::open(path) {
-                    let mut contents = String::new();
-                    f.read_to_string(&mut contents)
-                        .expect("Could not read the file");
+            if let Ok(mut f) = fs::File::open(path) {
+                let mut password;
+                let mut contents = String::new();
+                f.read_to_string(&mut contents)
+                    .expect("Could not read the file");
+                let b64d = general_purpose::STANDARD
+                    .decode(contents)
+                    .expect("Could not convert b64 to string");
+                loop {
+                    let passphrase = read_input("Please enter your passphrase");
 
-                    let b64d = general_purpose::STANDARD
-                        .decode(contents)
-                        .expect("Could not convert b64 to string");
-                    let password = decrypt_password(b64d, &passphrase[..16]);
-                    println!("{:?}", password);
-                } else {
-                    eprintln!("Could not find the website");
+                    if passphrase.len() != 16 {
+                        eprintln!("Passphrase should be 16 characters");
+                        continue;
+                    }
+                    password = decrypt_password(b64d.clone(), &passphrase);
+                    if password.is_ok() {
+                        break;
+                    } else {
+                        eprintln!("Passphrase is wrong");
+                    }
                 }
+
+                println!("{:?}", password.unwrap());
             } else {
-                eprintln!("Could not find passphrase, please make sure to set one");
+                eprintln!("Could not find the website");
             }
         }
         Commands::List {} => {
